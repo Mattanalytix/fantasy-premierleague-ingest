@@ -4,7 +4,7 @@ import yaml
 
 def load_config() -> dict:
     """
-    load application config into dict
+    load application config from config.yml
     @return application config dict
     """
     with open('config.yml', 'r') as file:
