@@ -1,3 +1,9 @@
+env:
+  project: GCLOUD_PROJECT
+  bucket: BUCKET
+  blobdir: BLOBDIR
+  dataset: DATASET
+
 api:
   base: https://fantasy.premierleague.com/api
   endpoints:
@@ -6,7 +12,7 @@ api:
       description: "This endpoint returns general information about the FPL game"
 
       # default params
-      config:
+      default_table_config:
         refresh_params:
           frequency: daily # default frequency
           write_disposition: overwrite
@@ -18,42 +24,42 @@ api:
 
       tables:
         # tables from bootstrap-static
-        - name: events
+        events:
           description: >
             (grain: gameweek, current season only) basic information of every Gameweek such as
             average score, highest score, top scoring player, most captained, etc.
 
-        - name: game_settings
+        game_settings:
           description: >
             (grain: 1 row) global settings for the game such as squad_squadplay and squad_squadsize.
             These settings are important for defining ML apps but not required in the analytics warehouse
           config:
             ingest: False
 
-        - name: phases
+        phases:
           description: >
             (grain: 1 row per month + overall, current season only) start, stop and 
             highest score events
           config:
             ingest: False
 
-        - name: teams
+        teams:
           description: >
             (grain: 1 row per team, current season only) basic information of current
             Premier League clubs.
 
-        - name: total_players
+        total_players:
           description: >
             (grain: 1 row, current season only) total FPL players
           config:
             ingest: False
 
-        - name: elements
+        elements:
           description: >
             (grain: 1 row per player, current season only) current information of all
             Premier League players including points, status, value, match stats (goals, assists, etc.),
             ICT index, etc
 
-        - name: element_types
+        element_types:
           description: >
             (grain: 1 row per position) basic information about players position (GK, DEF, MID, FWD)
