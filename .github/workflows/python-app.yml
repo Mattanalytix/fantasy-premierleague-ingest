@@ -5,9 +5,9 @@ name: Fantasy Premier League API Ingest
 
 on:
   push:
-    branches: [ "feature/initial_pr" ]
+    branches: [ "feature/intial_pr" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "feature/intial_pr" ]
 
 permissions:
   contents: read
