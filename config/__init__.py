@@ -7,7 +7,7 @@ def load_config() -> dict:
     load application config from config.yml
     @return application config dict
     """
-    with open('config.yml', 'r') as file:
+    with open('config/schema.yml', 'r') as file:
         return yaml.safe_load(file)
 
 
