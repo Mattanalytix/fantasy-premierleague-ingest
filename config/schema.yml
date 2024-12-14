@@ -11,6 +11,8 @@ api:
       name: bootstrap-static
       description: "This endpoint returns general information about the FPL game"
 
+      tables_nested: True
+
       # default params
       default_table_config:
         refresh_params:
@@ -63,3 +65,20 @@ api:
         element_types:
           description: >
             (grain: 1 row per position) basic information about players position (GK, DEF, MID, FWD)
+
+    fixtures:
+      name: fixtures
+      description: "This endpoint returns a JSON array which contains every fixture of the season. To get fixtures for specific Gameweek, you can add a parameter after the endpoint path (ex: fixtures?event=7). You can also request only the upcoming fixtures using future parameter (ex: fixtures?future=1). If you set the future value to 0, you will get all fixtures, but if 1 you will only get the upcoming fixtures. I see this parameter as a boolean value (future = true or false)."
+
+      tables_nested: False
+
+      # default params
+      default_table_config:
+        refresh_params:
+          frequency: daily # default frequency
+          write_disposition: overwrite
+        ingest: True
+        file_type: json # cloud storage file type
+        schema: autodetect
+        tags:
+          - fixtures

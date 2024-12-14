@@ -16,7 +16,8 @@ def test_endoint_configuration_errors():
     for k, config_endpoint in config_api['endpoints'].items():
         logging.debug('Validating the endpoint configuration for %s ...',
                       k)
-        config_endpoint_error_keys = {'name', 'config', 'tables'} - set(
+        config_endpoint_error_keys = {
+            'name', 'default_table_config', 'tables_nested'} - set(
             config_endpoint.keys())
         assert len(config_endpoint_error_keys) == 0, f"""
             Endpoint configuration for {k} missing

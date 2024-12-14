@@ -84,7 +84,13 @@ class FplIngest:
         else:
             logging.info('Using cached endpoint %s', endpoint_name)
             endpoint_dict = self.endpoints[endpoint_name]
-        table_dict = endpoint_dict[table_name]
+
+        config_endpoint = self.config_api['endpoints'][endpoint_name]
+        if config_endpoint['tables_nested']:
+            table_dict = endpoint_dict[table_name]
+        else:
+            table_dict = endpoint_dict
+
         return pl.DataFrame(table_dict)
 
     def ingest_table(
@@ -97,10 +103,14 @@ class FplIngest:
 
         config_endpoint = self.config_api['endpoints'][endpoint_name]
 
-        table_config = get_table_config(
-            config_endpoint['tables'][table_name],
-            config_endpoint['default_table_config']
-        )
+        if config_endpoint['tables_nested']:
+            table_config = get_table_config(
+                config_endpoint['tables'][table_name],
+                config_endpoint['default_table_config']
+            )
+        else:
+            table_config = config_endpoint['default_table_config']
+
         file_type = table_config['file_type']
         now_ts = int(round(datetime.now(timezone.utc).timestamp()))
         blob_name = f'{self.blobdir}/{now_ts}_{table_name}.{file_type}'
