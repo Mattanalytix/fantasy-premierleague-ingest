@@ -23,4 +23,5 @@ Optionally, install the following packages for local development:
 ```
 pip install ipykernel
 pip install python-dotenv
+pip install pytest
 ```
