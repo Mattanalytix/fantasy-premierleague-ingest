@@ -1,11 +1,11 @@
 import os
 import logging
-import requests
 from datetime import datetime, timezone
 
 import polars as pl
 
 from config import get_table_config
+from ingest.download import DOWNLOAD_ENDPOINT_LOOKUP
 from bigquery_etl_tools import (
     dataframe_to_bigquery
 )
@@ -34,27 +34,18 @@ class FplIngest:
         """
         return list(self.config_api['endpoints'].keys())
 
-    def get_endpoint(self, endpoint_name: str) -> dict:
+    def get_endpoint(self, endpoint_name: str, *args, **kwargs) -> dict:
         """
         download json contents of an endpoint to a python dictionary
         @param endpoint_name name of the endpoint to download
+        @param *args arguments for the endpoint function
+        @param **kwargs keyword arguments for the endpoint function
         @return json contents of the endpoint
         """
-        config_endpoint = self.config_api['endpoints'][endpoint_name]
-        api_base = self.config_api['base']
-        endpoint = f'{api_base}/{config_endpoint["name"]}'
-        logging.info('Downloading endpoint %s', endpoint)
-        r = requests.get(endpoint)
-
-        if r.status_code == 200:
-            self.endpoints[endpoint_name] = r.json()
-            return r.json()
-
-        else:
-            logging.error(f'[{r.status_code}] API call failed')
-            logging.error(r.content)
-            logging.info('Try again later ...')
-            return None
+        self.endpoints.update(DOWNLOAD_ENDPOINT_LOOKUP[
+            endpoint_name
+        ](*args, **kwargs))
+        return self.endpoints[endpoint_name]
 
     def release_endpoint(self, endpoint_name: str) -> None:
         """
@@ -69,29 +60,26 @@ class FplIngest:
             self,
             endpoint_name: str,
             table_name: str,
-            refresh: bool = False) -> pl.DataFrame:
+            refresh: bool = False,
+            endoint_kwargs: dict = {}
+            ) -> pl.DataFrame:
         """
         get table from endpoint
         @param endpoint_name name of the endpoint to download
         @param table_name name of table
         @param refresh boolean to refresh endpoint data, cache used if false
             and cache exists
+        @param endoint_kwargs keyword arguments for the endpoint function
         @return table as a polars dataframe
         """
         if refresh or endpoint_name not in self.endpoints:
             logging.info('Refreshing endpoint %s', endpoint_name)
-            endpoint_dict = self.get_endpoint(endpoint_name)
+            endpoint_dict = self.get_endpoint(endpoint_name, **endoint_kwargs)
         else:
             logging.info('Using cached endpoint %s', endpoint_name)
             endpoint_dict = self.endpoints[endpoint_name]
 
-        config_endpoint = self.config_api['endpoints'][endpoint_name]
-        if config_endpoint['tables_nested']:
-            table_dict = endpoint_dict[table_name]
-        else:
-            table_dict = endpoint_dict
-
-        return pl.DataFrame(table_dict)
+        return pl.DataFrame(endpoint_dict[table_name])
 
     def ingest_table(
             self,
@@ -103,13 +91,10 @@ class FplIngest:
 
         config_endpoint = self.config_api['endpoints'][endpoint_name]
 
-        if config_endpoint['tables_nested']:
-            table_config = get_table_config(
-                config_endpoint['tables'][table_name],
-                config_endpoint['default_table_config']
-            )
-        else:
-            table_config = config_endpoint['default_table_config']
+        table_config = get_table_config(
+            config_endpoint['tables'][table_name],
+            config_endpoint['default_table_config']
+        )
 
         file_type = table_config['file_type']
         now_ts = int(round(datetime.now(timezone.utc).timestamp()))
