@@ -88,6 +88,17 @@ api:
     element_summary:
       name: element-summary
       description: "This endpoint returns a players detailed information divided into 3 section"
+      # default params
+      default_table_config:
+        refresh_params:
+          frequency: daily # default frequency
+          write_disposition: overwrite
+        ingest: True
+        file_type: json # cloud storage file type
+        schema: autodetect
+        tags:
+          - element-summary
+      
       tables:
         history:
           description: >
