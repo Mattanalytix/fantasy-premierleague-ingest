@@ -41,9 +41,11 @@ def get_element_summary(elements: list, history_past: bool = False):
     if history_past:
         element_summary_dict['history_past'] = []
 
-    for element in elements:
+    len_elements = len(elements)
+    for i, element in enumerate(elements):
         endpoint = f'{API_BASE}/element-summary/{element}'
-        logging.info('Downloading endpoint %s', endpoint)
+        logging.info('[%s/%s] Downloading endpoint %s',
+                     i + 1, len_elements, endpoint)
         json = get_endpoint_wrapper(endpoint)
         missing_keys = set(element_summary_dict.keys()) - set(json.keys())
         assert missing_keys == set(), \
@@ -57,11 +59,3 @@ def get_element_summary(elements: list, history_past: bool = False):
             element_summary_dict[k].extend(json[k])
 
     return {'element_summary': element_summary_dict}
-
-
-# @TODO add pytest to check this works for all configured endpoints
-DOWNLOAD_ENDPOINT_LOOKUP = {
-    'bootstrap_static': get_bootstrap_static,
-    'fixtures': get_fixtures,
-    'element_summary': get_element_summary
-}

@@ -5,11 +5,30 @@ from datetime import datetime, timezone
 import polars as pl
 
 from config import get_table_config
-from ingest.download import DOWNLOAD_ENDPOINT_LOOKUP
+from ingest.download import (
+    get_bootstrap_static,
+    get_fixtures,
+    get_element_summary
+)
+from ingest.transform import (
+    transform_fixtures
+)
 from bigquery_etl_tools import (
     dataframe_to_bigquery
 )
 from bigquery_etl_tools.bigquery_utils import table_exists
+
+
+# @TODO add pytest to check this works for all configured endpoints
+DOWNLOAD_LOOKUP = {
+    'bootstrap_static': get_bootstrap_static,
+    'fixtures': get_fixtures,
+    'element_summary': get_element_summary
+}
+
+TRANSFORM_LOOKUP = {
+    'fixtures': transform_fixtures
+}
 
 
 class FplIngest:
@@ -42,7 +61,7 @@ class FplIngest:
         @param **kwargs keyword arguments for the endpoint function
         @return json contents of the endpoint
         """
-        self.endpoints.update(DOWNLOAD_ENDPOINT_LOOKUP[
+        self.endpoints.update(DOWNLOAD_LOOKUP[
             endpoint_name
         ](*args, **kwargs))
         return self.endpoints[endpoint_name]
@@ -79,7 +98,61 @@ class FplIngest:
             logging.info('Using cached endpoint %s', endpoint_name)
             endpoint_dict = self.endpoints[endpoint_name]
 
-        return pl.DataFrame(endpoint_dict[table_name])
+        return TRANSFORM_LOOKUP.get(table_name, lambda x: x)(
+            pl.DataFrame(endpoint_dict[table_name]))
+
+    def get_fixtures(
+            self,
+            fixture_date: datetime.date
+            ) -> pl.DataFrame:
+        """
+        get fixture list on a given date
+        @param fixture_date date to get fixtures for
+        @return table as a polars dataframe
+        """
+        logging.info("Getting fixtures from %s", fixture_date)
+        endpoints = self.list_endpoints()
+
+        fixtures = self.get_table(endpoints[1], 'fixtures')
+        teams = self.get_table(endpoints[0], 'teams')
+
+        fixtures_filtered = (
+            fixtures
+            .select(['kickoff_time', 'team_h', 'team_a'])
+            .filter(pl.col("kickoff_time").dt.date() == fixture_date)
+            .join(
+                teams.select(['id', 'name']),
+                left_on="team_h",
+                right_on="id",
+                how='left')
+            .rename({'name': 'team_h_name'})
+            .join(
+                teams.select(['id', 'name']),
+                left_on="team_a",
+                right_on="id",
+                how='left')
+            .rename({'name': 'team_a_name'})
+        )
+
+        return fixtures_filtered
+
+    # @TODO add unit test to make sure default gets all elements
+    def get_element_list(
+            self,
+            teams=range(1, 21)
+            ) -> list:
+        """
+        get a list of element ids (players) from a list of team ids
+        @param teams list of team ids
+        @return list of element ids
+        """
+        endpoints = self.list_endpoints()
+        players = self.get_table(endpoints[0], 'elements')
+        return pl.Series((
+            players
+            .filter(pl.col('team').is_in(teams))
+            .select(['id'])
+        )).to_list()
 
     def ingest_table(
             self,

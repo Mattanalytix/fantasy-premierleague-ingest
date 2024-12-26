@@ -84,3 +84,23 @@ api:
         fixtures:
           description: >
             (grain: 1 row per fixture)
+
+    element_summary:
+      name: element-summary
+      description: "This endpoint returns a players detailed information divided into 3 section"
+      tables:
+        history:
+          description: >
+            (grain: player fixture, current season only) A list of players previous fixtures and its match stats
+
+        fixtures:
+          description: >
+            (grain: fixture) A list of players remaining fixtures of the season
+          config:
+            ingest: False
+
+        history_past:
+          description: >
+            (grain: playerseason) A list of players previous seasons and its seasonal stats.
+          config:
+            ingest: False
