@@ -11,20 +11,19 @@ from config import get_config
 from ingest.fpl import FplClient
 
 
-class FplUploader:
+class FplUploader(FplClient):
     """
     class for uploading tables from fantasy premier league to bigquery
     """
     def __init__(self,
                  config: dict) -> None:
-        self.config_api = config['api']
+        super().__init__(config)
         self.__env = {}
         for name, value in config['env'].items():
             self.__env[name] = os.environ[value]
         self.BUCKET = self.__env["BUCKET"]
         self.BLOBDIR = self.__env["BLOBDIR"]
         self.DATASET = self.__env["DATASET"]
-        self.fpl_client = FplClient(config)
 
     def ingest_table(
             self,
@@ -44,7 +43,7 @@ class FplUploader:
 
         logging.info("Downloading table %s from endpoint %s",
                      table_name, endpoint_name)
-        df = self.fpl_client.get_table(
+        df = self.get_table(
             endpoint_name, table_name, refresh, endoint_kwargs)
 
         endpoint_config = self.config_api['endpoints'][endpoint_name]
