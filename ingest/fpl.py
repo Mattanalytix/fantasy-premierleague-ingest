@@ -1,10 +1,7 @@
-import os
 import logging
-from datetime import datetime, timezone
-
+from datetime import datetime
 import polars as pl
 
-from config import get_table_config
 from ingest.download import (
     get_bootstrap_static,
     get_fixtures,
@@ -13,10 +10,6 @@ from ingest.download import (
 from ingest.transform import (
     transform_fixtures
 )
-from bigquery_etl_tools import (
-    dataframe_to_bigquery
-)
-from bigquery_etl_tools.bigquery_utils import table_exists
 
 
 # @TODO add pytest to check this works for all configured endpoints
@@ -31,20 +24,14 @@ TRANSFORM_LOOKUP = {
 }
 
 
-class FplIngest:
+class FplClient:
     """
-    class for ingesting data from the fantasy.premierleague api
+    class for interacting with the fantasy.premierleague api
     """
     def __init__(self,
-                 config):
+                 config: dict) -> None:
         self.config_api = config['api']
-        self.__env = {}
-        for name, value in config['env'].items():
-            self.__env[name] = os.environ[value]
         self.endpoints = {}
-        self.bucket = self.__env["bucket"]
-        self.blobdir = self.__env["blobdir"]
-        self.dataset = self.__env["dataset"]
 
     def list_endpoints(self) -> list:
         """
@@ -153,37 +140,3 @@ class FplIngest:
             .filter(pl.col('team').is_in(teams))
             .select(['id'])
         )).to_list()
-
-    def ingest_table(
-            self,
-            endpoint_name: str,
-            table_name: str,
-            refresh: bool = False) -> None:
-
-        df = self.get_table(endpoint_name, table_name, refresh)
-
-        config_endpoint = self.config_api['endpoints'][endpoint_name]
-
-        table_config = get_table_config(
-            config_endpoint['tables'][table_name],
-            config_endpoint['default_table_config']
-        )
-
-        file_type = table_config['file_type']
-        now_ts = int(round(datetime.now(timezone.utc).timestamp()))
-        blob_name = f'{self.blobdir}/{now_ts}_{table_name}.{file_type}'
-        table_id = f'{self.dataset}.{table_name}'
-
-        blob, table = dataframe_to_bigquery(
-            dataframe=df,
-            bucket_name=self.bucket,
-            blob_name=blob_name,
-            table_id=table_id,
-            file_type=file_type
-        )
-
-        assert blob.exists(), f"""Blob {blob.name} does not exist"""
-        assert table_exists(table), f"""Table {table.table_id} does
-            not exist"""
-        assert datetime.timestamp(table.modified) - now_ts > 0, """
-            Table not updated"""

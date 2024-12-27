@@ -7,7 +7,7 @@ def load_config() -> dict:
     load application config from config.yml
     @return application config dict
     """
-    with open('config/schema.yml', 'r') as file:
+    with open('config/config.yml', 'r') as file:
         return yaml.safe_load(file)
 
 
@@ -32,18 +32,17 @@ def validate_config_endpoint(config_endpoint: dict) -> None:
         logging.warning(e)
 
 
-def get_table_config(table: dict, default_config: dict) -> dict:
+def get_config(config: dict, default: dict) -> dict:
     """
-    get table config and overwrite defaults if config set for table
+    get config and use default args if none set
     @param table config for the table
     @param default_config default config for all tables
     @return table config with defaults
     """
-    table_config = table.get('config', {})
-    for k, v in default_config.items():
-        if k not in table_config:
-            table_config[k] = v
+    for k, v in default.items():
+        if k not in config:
+            config[k] = v
         else:
             logging.debug("""Overwritting default config for '%s' to %s for
-                          table %s""", k, v, table['name'])
-    return table_config
+                          """, k, v)
+    return config

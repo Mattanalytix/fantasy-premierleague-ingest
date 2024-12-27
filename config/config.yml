@@ -1,47 +1,44 @@
 env:
-  project: GCLOUD_PROJECT
-  bucket: BUCKET
-  blobdir: BLOBDIR
-  dataset: DATASET
+  PROJECT: GCLOUD_PROJECT
+  BUCKET: BUCKET
+  BLOBDIR: BLOBDIR
+  DATASET: DATASET
 
 api:
   base: https://fantasy.premierleague.com/api
+
   endpoints:
     bootstrap_static:
       name: bootstrap-static
       description: "This endpoint returns general information about the FPL game"
 
-      # default params
-      default_table_config:
-        refresh_params:
-          frequency: daily # default frequency
-          write_disposition: overwrite
-        ingest: True
-        file_type: json # cloud storage file type
-        schema: autodetect
-        tags:
-          - bootstrap-static
+      # default gcp args (can be overwritten by using the same args under the tables config)
+      file_type: json
+      # currently tags only used for internal meta data
+      tags:
+        - bootstrap-static
+        - gameweekly
+      bigquery_config:
+        autodetect: True
+        write_disposition: WRITE_TRUNCATE
 
       tables:
-        # tables from bootstrap-static
         events:
           description: >
             (grain: gameweek, current season only) basic information of every Gameweek such as
             average score, highest score, top scoring player, most captained, etc.
-
+        
         game_settings:
           description: >
             (grain: 1 row) global settings for the game such as squad_squadplay and squad_squadsize.
             These settings are important for defining ML apps but not required in the analytics warehouse
-          config:
-            ingest: False
+          ingest: False
 
         phases:
           description: >
             (grain: 1 row per month + overall, current season only) start, stop and 
             highest score events
-          config:
-            ingest: False
+          ingest: False
 
         teams:
           description: >
@@ -51,8 +48,7 @@ api:
         total_players:
           description: >
             (grain: 1 row, current season only) total FPL players
-          config:
-            ingest: False
+          ingest: False
 
         elements:
           description: >
@@ -62,25 +58,22 @@ api:
 
         element_types:
           description: >
-            (grain: 1 row per position) basic information about players position (GK, DEF, MID, FWD)
+            grain: 1 row per position) basic information about players position (GK, DEF, MID, FWD)
 
     fixtures:
       name: fixtures
       description: "This endpoint returns a JSON array which contains every fixture of the season. To get fixtures for specific Gameweek, you can add a parameter after the endpoint path (ex: fixtures?event=7). You can also request only the upcoming fixtures using future parameter (ex: fixtures?future=1). If you set the future value to 0, you will get all fixtures, but if 1 you will only get the upcoming fixtures. I see this parameter as a boolean value (future = true or false)."
 
-      # default params
-      default_table_config:
-        refresh_params:
-          frequency: daily # default frequency
-          write_disposition: overwrite
-        ingest: True
-        file_type: json # cloud storage file type
-        schema: autodetect
-        tags:
-          - fixtures
+      # default gcp args (can be overwritten by using the same args under the tables config)
+      file_type: json
+      tags:
+        - fixtures
+        - daily
+      bigquery_config:
+        autodetect: True
+        write_disposition: WRITE_TRUNCATE
 
       tables:
-
         fixtures:
           description: >
             (grain: 1 row per fixture)
@@ -88,16 +81,14 @@ api:
     element_summary:
       name: element-summary
       description: "This endpoint returns a players detailed information divided into 3 section"
-      # default params
-      default_table_config:
-        refresh_params:
-          frequency: daily # default frequency
-          write_disposition: overwrite
-        ingest: True
-        file_type: json # cloud storage file type
-        schema: autodetect
-        tags:
-          - element-summary
+      # default gcp args (can be overwritten by using the same args under the tables config)
+      file_type: json
+      tags:
+        - fixtures
+        - gameweekly
+      bigquery_config:
+        autodetect: True
+        write_disposition: WRITE_APPEND
       
       tables:
         history:
@@ -107,11 +98,9 @@ api:
         fixtures:
           description: >
             (grain: fixture) A list of players remaining fixtures of the season
-          config:
-            ingest: False
+          ingest: False
 
         history_past:
           description: >
             (grain: playerseason) A list of players previous seasons and its seasonal stats.
-          config:
-            ingest: False
+          ingest: False
