@@ -17,7 +17,7 @@ def test_endoint_configuration_errors():
         logging.debug('Validating the endpoint configuration for %s ...',
                       k)
         config_endpoint_error_keys = {
-            'name', 'default_table_config', 'tables'} - set(
+            'name', 'bigquery_config', 'tables', 'file_type'} - set(
             config_endpoint.keys())
         assert len(config_endpoint_error_keys) == 0, f"""
             Endpoint configuration for {k} missing
