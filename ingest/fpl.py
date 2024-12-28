@@ -67,7 +67,7 @@ class FplClient:
             endpoint_name: str,
             table_name: str,
             refresh: bool = False,
-            endoint_kwargs: dict = {}
+            endpoint_kwargs: dict = {}
             ) -> pl.DataFrame:
         """
         get table from endpoint
@@ -75,12 +75,12 @@ class FplClient:
         @param table_name name of table
         @param refresh boolean to refresh endpoint data, cache used if false
             and cache exists
-        @param endoint_kwargs keyword arguments for the endpoint function
+        @param endpoint_kwargs keyword arguments for the endpoint function
         @return table as a polars dataframe
         """
         if refresh or endpoint_name not in self.endpoints:
             logging.info('Refreshing endpoint %s', endpoint_name)
-            endpoint_dict = self.get_endpoint(endpoint_name, **endoint_kwargs)
+            endpoint_dict = self.get_endpoint(endpoint_name, **endpoint_kwargs)
         else:
             logging.info('Using cached endpoint %s', endpoint_name)
             endpoint_dict = self.endpoints[endpoint_name]
@@ -91,7 +91,7 @@ class FplClient:
     def get_fixtures(
             self,
             fixture_date: datetime.date
-            ) -> pl.DataFrame:
+            ) -> tuple[pl.DataFrame, list]:
         """
         get fixture list on a given date
         @param fixture_date date to get fixtures for
@@ -121,10 +121,17 @@ class FplClient:
             .rename({'name': 'team_a_name'})
         )
 
-        return fixtures_filtered
+        teams = pl.Series((
+            fixtures_filtered
+            .unpivot(['team_h', 'team_a'])
+            .select(['value'])
+            .unique()
+        )).to_list()
+
+        return fixtures_filtered, teams
 
     # @TODO add unit test to make sure default gets all elements
-    def get_element_list(
+    def list_elements(
             self,
             teams=range(1, 21)
             ) -> list:
@@ -140,3 +147,31 @@ class FplClient:
             .filter(pl.col('team').is_in(teams))
             .select(['id'])
         )).to_list()
+
+    def list_endpoint_tables(
+            self,
+            endpoint_name: str,
+            ingest_only: bool = False
+            ) -> list:
+        """
+        list the configured tables available from an endpoint
+        @param endpoint_name name of the endpoint to download
+        @param ingest_only only list tables that are configured to ingest
+        @return list of available tables
+        """
+        table_list = []
+        endpoint_config = self.config_api['endpoints'][endpoint_name]
+        for k, v in endpoint_config['tables'].items():
+            if not ingest_only or ('ingest' not in v):
+                table_list.append(k)
+
+            elif v['ingest']:
+                table_list.append(k)
+
+            else:
+                continue
+
+        logging.info("""The endpoint %s has the following tables configured to
+                     ingest %s""", endpoint_name, table_list)
+
+        return table_list

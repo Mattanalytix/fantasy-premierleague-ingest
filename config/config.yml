@@ -88,7 +88,7 @@ api:
         - gameweekly
       bigquery_config:
         autodetect: True
-        write_disposition: WRITE_APPEND
+        write_disposition: WRITE_APPEND # overwritten to WRITE_TRUNCATE for full refreshes
       
       tables:
         history:
