@@ -1,0 +1,7 @@
+version: '3'
+services:
+  ingest_players_job:
+    image: europe-west2-docker.pkg.dev/raw-nonprod-service-k41/test/ingest_players_job
+    build:
+      context: .
+      dockerfile: ./cloud_run/ingest_players_job/Dockerfile
