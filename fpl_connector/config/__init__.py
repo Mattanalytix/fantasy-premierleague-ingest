@@ -7,7 +7,7 @@ def load_config() -> dict:
     load application config from config.yml
     @return application config dict
     """
-    with open('config/config.yml', 'r') as file:
+    with open('fpl_connector/config/config.yml', 'r') as file:
         return yaml.safe_load(file)
 
 

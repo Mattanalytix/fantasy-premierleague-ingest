@@ -2,12 +2,12 @@ import logging
 from datetime import datetime
 import polars as pl
 
-from ingest.download import (
+from .download import (
     get_bootstrap_static,
     get_fixtures,
     get_element_summary
 )
-from ingest.transform import (
+from .transform import (
     transform_fixtures
 )
 

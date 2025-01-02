@@ -1,6 +1,6 @@
 import logging
-from utils.request_utils import get_endpoint_wrapper
-from config import load_config
+from .utils.request_utils import get_endpoint_wrapper
+from .config import load_config
 
 config = load_config()
 config_api = config['api']

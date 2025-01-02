@@ -7,11 +7,11 @@ from bigquery_etl_tools import (
 )
 from bigquery_etl_tools.bigquery_utils import table_exists
 
-from config import get_config
-from ingest.fpl import FplClient
+from ..config import get_config
+from ..fpl import FplClient
 
 
-class FplUploader(FplClient):
+class FplBigqueryClient(FplClient):
     """
     class for uploading tables from fantasy premier league to bigquery
     """
