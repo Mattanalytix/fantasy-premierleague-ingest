@@ -1,5 +1,7 @@
 import logging
 import yaml
+from importlib import resources as impresources
+from .. import templates
 
 
 def load_config() -> dict:
@@ -7,7 +9,8 @@ def load_config() -> dict:
     load application config from config.yml
     @return application config dict
     """
-    with open('fpl_connector/config/config.yml', 'r') as file:
+    inp_file = impresources.files(templates) / 'config.yml'
+    with inp_file.open('r') as file:
         return yaml.safe_load(file)
 
 
