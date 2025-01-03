@@ -47,8 +47,45 @@ def run_daily_pipeline(test: bool = False):
     return meta
 
 
-def run_players_to_storage(teams: list):
-    pass
+def run_players_to_storage(
+        teams: list,
+        test: bool = False,
+        output_dir: str = 'this_season'):
+    """
+    run function to move element summary player history to cloud storage
+        for a set of teams
+    @param teams a list of team ids
+    @param test boolean indicating whether this is a test run
+    @param output_dir the base blobdir in the bucket to place results
+    @return None
+    """
+    ENDPOINT = "element_summary"
+    today_dt = datetime.now()
+    if test:
+        teams = [1, 2]
+
+    config = load_config()
+    fpl_client = FplBigqueryClient(config)
+    table = "history"
+    logging.info("Ingest prepared for the following tables %s", table)
+    for team in teams:
+        logging.info("Downloading players from team %s", team)
+        dataframe = fpl_client.get_table(
+            ENDPOINT,
+            table,
+            endpoint_kwargs={'elements': fpl_client.list_elements(team)}
+        )
+        todays_file = f'{today_dt.strftime("%Y%m%d")}/{table}_{team}.csv'
+        output_file = f'{output_dir}/{table}/full_refresh/{todays_file}'
+        fpl_client.etl_client.dataframe_to_storage(
+            dataframe,
+            output_file,
+            'csv'
+        )
+        logging.info(
+            "Releasing endpoint from cache %s and downloading new team",
+            ENDPOINT)
+        fpl_client.release_endpoint(ENDPOINT)
 
 
 def run_players_to_bigquery():

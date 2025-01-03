@@ -82,18 +82,19 @@ api:
       name: element-summary
       description: "This endpoint returns a players detailed information divided into 3 section"
       # default gcp args (can be overwritten by using the same args under the tables config)
-      file_type: json
+      file_type: csv
       tags:
         - fixtures
         - gameweekly
       bigquery_config:
-        autodetect: True
+        autodetect: False
         write_disposition: WRITE_APPEND # overwritten to WRITE_TRUNCATE for full refreshes
       
       tables:
         history:
           description: >
             (grain: player fixture, current season only) A list of players previous fixtures and its match stats
+          schema: bigquery/schemas/history.json
 
         fixtures:
           description: >

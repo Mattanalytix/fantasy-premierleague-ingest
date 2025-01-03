@@ -163,4 +163,5 @@ cython_debug/
 
 notebook.ipynb
 mnt/
+data/
 *.DS_Store

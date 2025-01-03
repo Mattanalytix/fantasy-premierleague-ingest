@@ -1,15 +1,10 @@
 import os
 import sys
 import logging
-import json
-import requests
-from datetime import datetime, timedelta
+
 import google.cloud.logging
 
-from fpl_connector import (
-    FplClient,
-    load_config
-)
+from run import run_players_to_storage
 
 logging.basicConfig(level=logging.INFO)
 client = google.cloud.logging.Client()
@@ -23,22 +18,11 @@ TASK_ATTEMPT = os.getenv("CLOUD_RUN_TASK_ATTEMPT", 0)
 def main():
     logging.info(f"""Starting Task #{str(TASK_INDEX)},
                  Attempt #{str(TASK_ATTEMPT)}...""")
-    config = load_config()
-    fpl_client = FplClient(config)
-    logging.info("Getting yesterdays fixtures")
-    yesterday_date = (datetime.now().date() - timedelta(days=1))
-    yesterdays_fixtures, _ = fpl_client.get_fixtures(yesterday_date)
-    yesterdays_fixtures.write_csv(
-        f'mnt/fpl-bucket/yesterday_{str(TASK_INDEX)}.csv')
-
-    base = "https://fantasy.premierleague.com/api/element-summary"
-    player = int(TASK_INDEX)+1
-    endpoint = f"{base}/{str(player)}"
-    logging.info("Getting data from endpoint %s", endpoint)
-    r = requests.get(f"{base}/{str(player)}")
-    data = r.json()
-    with open(f'mnt/fpl-bucket/player-{str(player)}.json', 'w') as f:
-        json.dump(data, f)
+    teams = [x+(int(TASK_INDEX)*4) for x in list(range(1, 6))]
+    logging.info("Running for teams %s", teams)
+    run_players_to_storage(
+        teams=teams
+    )
     logging.info(f"Completed Task #{TASK_INDEX}.")
 
 

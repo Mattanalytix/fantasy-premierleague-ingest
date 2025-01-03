@@ -1,14 +1,16 @@
 import os
 import logging
 from datetime import datetime, timezone
+from importlib import resources as impresources
 from google.cloud import bigquery
 from bigquery_etl_tools import (
-    dataframe_to_bigquery
+    BigqueryEtlClient
 )
 from bigquery_etl_tools.bigquery_utils import table_exists
 
 from ..config import get_config
 from ..fpl import FplClient
+from .. import templates
 
 
 class FplBigqueryClient(FplClient):
@@ -24,6 +26,7 @@ class FplBigqueryClient(FplClient):
         self.BUCKET = self.__env["BUCKET"]
         self.BLOBDIR = self.__env["BLOBDIR"]
         self.DATASET = self.__env["DATASET"]
+        self.etl_client = BigqueryEtlClient(self.BUCKET)
 
     def __ingest_table_inner(
             self,
@@ -66,14 +69,24 @@ class FplBigqueryClient(FplClient):
             **load_job_kwargs
         )
 
+        if 'schema' in table_config:
+            inp_file = impresources.files(templates) / table_config['schema']
+            logging.info("Loading schema from %s", inp_file)
+            with inp_file.open('r') as file:
+                schema = self.etl_client.bigquery_client.schema_from_json(file)
+            job_config.schema = schema
+        else:
+            logging.info("No schema specified for %s in config, autodetecting",
+                         table_name)
+            job_config.autodetect = True
+
         now_ts = int(round(datetime.now(timezone.utc).timestamp()))
         blob_name = f'{self.BLOBDIR}/{now_ts}_{table_name}.{file_type}'
         table_id = f'{self.DATASET}.{table_name}'
 
         logging.info("Uploading table %s to bigquery", table_name)
-        blob, table = dataframe_to_bigquery(
+        blob, table = self.etl_client.dataframe_to_bigquery(
             dataframe=df,
-            bucket_name=self.BUCKET,
             blob_name=blob_name,
             table_id=table_id,
             file_type=file_type,

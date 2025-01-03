@@ -1,6 +1,7 @@
+
 ```cmd
-gcloud auth configure-docker \
-    europe-west2-docker.pkg.dev
+gcloud auth application-default login
+gcloud config set project YOUR_PROJECT_ID
 ```
 
 To build this app run the following from the root of the repository:
