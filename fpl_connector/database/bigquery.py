@@ -1,4 +1,3 @@
-import os
 import logging
 from datetime import datetime, timezone
 from importlib import resources as impresources
@@ -18,15 +17,31 @@ class FplBigqueryClient(FplClient):
     class for uploading tables from fantasy premier league to bigquery
     """
     def __init__(self,
-                 config: dict) -> None:
+                 config: dict,
+                 bucket: str,
+                 dataset: str
+                 ) -> None:
         super().__init__(config)
-        self.__env = {}
-        for name, value in config['env'].items():
-            self.__env[name] = os.environ[value]
-        self.BUCKET = self.__env["BUCKET"]
-        self.BLOBDIR = self.__env["BLOBDIR"]
-        self.DATASET = self.__env["DATASET"]
+        self.BUCKET = bucket
+        self.DATASET = dataset
         self.etl_client = BigqueryEtlClient(self.BUCKET)
+        self.storage_client = self.etl_client.storage_client
+        self.bigquery_client = self.etl_client.bigquery_client
+
+    def load_bigquery_schema(
+            self,
+            table_name: str
+            ) -> list:
+        """
+        load bigquery schema from location
+        @return bigquery schema list
+        """
+        schema_path = f'bigquery/schemas/{table_name}.json'
+        inp_file = impresources.files(templates) / schema_path
+        logging.info("Loading schema from %s", inp_file)
+        with inp_file.open('r') as file:
+            schema = self.etl_client.bigquery_client.schema_from_json(file)
+        return schema
 
     def __ingest_table_inner(
             self,
@@ -69,19 +84,17 @@ class FplBigqueryClient(FplClient):
             **load_job_kwargs
         )
 
-        if 'schema' in table_config:
-            inp_file = impresources.files(templates) / table_config['schema']
-            logging.info("Loading schema from %s", inp_file)
-            with inp_file.open('r') as file:
-                schema = self.etl_client.bigquery_client.schema_from_json(file)
-            job_config.schema = schema
+        use_schema = table_config.get('use_schema', False)
+        if use_schema:
+            job_config.schema = self.load_bigquery_schema(table_name)
         else:
             logging.info("No schema specified for %s in config, autodetecting",
                          table_name)
             job_config.autodetect = True
 
         now_ts = int(round(datetime.now(timezone.utc).timestamp()))
-        blob_name = f'{self.BLOBDIR}/{now_ts}_{table_name}.{file_type}'
+        blob_dir = f'this_season/{table_name}'
+        blob_name = f'{blob_dir}/{now_ts}_{table_name}.{file_type}'
         table_id = f'{self.DATASET}.{table_name}'
 
         logging.info("Uploading table %s to bigquery", table_name)
@@ -185,3 +198,33 @@ class FplBigqueryClient(FplClient):
         if remove_cache:
             self.release_endpoint(ENDPOINT)
         return meta
+
+    def load_player_history_from_uri(
+            self,
+            date_string: str
+            ) -> bigquery.LoadJob:
+        """
+        Load the player history csv's from uri
+        @param date_string indicates the date the player data was loaded
+            this controls where the data will be stored in cloud storage
+        @return job the bigquery load job
+        """
+
+        bigquery_client = bigquery.Client()
+
+        job_config = bigquery.LoadJobConfig(
+            source_format='CSV',
+            write_disposition='WRITE_TRUNCATE',
+            schema=self.load_bigquery_schema('history'),
+            skip_leading_rows=1
+        )
+
+        blob_dir = f'this_season/history/full_refresh/{date_string}'
+        job = bigquery_client.load_table_from_uri(
+            f'gs://{self.BUCKET}/{blob_dir}/*',
+            'fantasy_premier_league.history',
+            job_config=job_config
+        )
+        job.result()
+
+        return job

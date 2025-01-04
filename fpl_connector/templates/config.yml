@@ -1,9 +1,3 @@
-env:
-  PROJECT: GCLOUD_PROJECT
-  BUCKET: BUCKET
-  BLOBDIR: BLOBDIR
-  DATASET: DATASET
-
 api:
   base: https://fantasy.premierleague.com/api
 
@@ -94,7 +88,7 @@ api:
         history:
           description: >
             (grain: player fixture, current season only) A list of players previous fixtures and its match stats
-          schema: bigquery/schemas/history.json
+          use_schema: True
 
         fixtures:
           description: >

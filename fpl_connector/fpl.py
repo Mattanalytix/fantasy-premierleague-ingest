@@ -140,6 +140,11 @@ class FplClient:
         @param teams list of team ids
         @return list of element ids
         """
+        start, end = 1, 20
+        assert not any((team < start or team > end) for team in teams), f"""\
+        The following teams are out of index: \
+        {[team for team in teams if (team < start or team > end)]}"""
+
         endpoints = self.list_endpoints()
         players = self.get_table(endpoints[0], 'elements')
         return pl.Series((

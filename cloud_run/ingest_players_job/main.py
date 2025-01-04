@@ -6,22 +6,23 @@ import google.cloud.logging
 
 from run import run_players_to_storage
 
-logging.basicConfig(level=logging.INFO)
 client = google.cloud.logging.Client()
 client.setup_logging()
 
 # Retrieve Job-defined env vars
 TASK_INDEX = os.getenv("CLOUD_RUN_TASK_INDEX", 0)
 TASK_ATTEMPT = os.getenv("CLOUD_RUN_TASK_ATTEMPT", 0)
+BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
 def main():
     logging.info(f"""Starting Task #{str(TASK_INDEX)},
                  Attempt #{str(TASK_ATTEMPT)}...""")
-    teams = [x+(int(TASK_INDEX)*4) for x in list(range(1, 6))]
+    teams = [x+(int(TASK_INDEX)*4) for x in list(range(1, 5))]
     logging.info("Running for teams %s", teams)
     run_players_to_storage(
-        teams=teams
+        teams=teams,
+        bucket_name=BUCKET_NAME
     )
     logging.info(f"Completed Task #{TASK_INDEX}.")
 
